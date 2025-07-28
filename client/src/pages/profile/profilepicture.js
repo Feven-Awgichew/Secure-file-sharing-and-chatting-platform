@@ -1,0 +1,95 @@
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
+import { setUser } from "../../redux/usersSlice";
+import toast from "react-hot-toast";
+import { hideLoader, showLoader } from "../../redux/loaderSlice";
+import { uploadProfilePic } from "../../apiCalls/users";
+
+
+
+function ProfilePic(){
+
+        const { user } = useSelector(state => state.userReducer);
+        const [image, setImage] = useState('');
+        const dispatch = useDispatch();
+        const [isFullSize, setIsFullSize] = useState(false);
+
+        useEffect(() => {
+        if(user?.profilePic){
+            setImage(user.profilePic);
+        }
+    }, [user])
+
+    const onFileSelect = async (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader(file);
+
+        reader.readAsDataURL(file);
+
+        reader.onloadend = async () => {
+            setImage(reader.result);
+        }
+    }
+
+    const updateProfilePic = async () => {
+        
+        try{
+            dispatch(showLoader());
+            const response = await uploadProfilePic(image);
+            dispatch(hideLoader());
+
+            if(response.success){
+                toast.success(response.message);
+                dispatch(setUser(response.data));
+            }else{
+                toast.error(response.message);
+            }
+        }catch(err){
+            toast.error(err.message);
+            dispatch(hideLoader());
+        }
+
+        
+    }
+
+    const FullSize = () => {
+        setIsFullSize(!isFullSize);
+    };
+
+    function getInitials(){
+        let f = user?.firstname.toUpperCase()[0];
+        let l = user?.lastname.toUpperCase()[0];
+        return f + l;
+    }
+
+    return (
+        <div className="profile-page-container-aa">
+
+        <div className="profile-pic-container" onClick={FullSize}>
+            {image && <img 
+                 src={image} 
+                 alt="Profile Pic" 
+                 className="user-profile-pic-upload" 
+            />}
+            {!image && <div className="user-default-profile-avatar">
+                { getInitials() }
+            </div>}
+            </div>
+
+        <div className="select-profile-pic-container">
+        <input type="file" onChange={ onFileSelect } />
+                <button className="upload-btn" onClick={updateProfilePic}>
+                    Upload
+                </button>
+                
+          </div>
+          {isFullSize && (
+                <div className="full-size-modal" onClick={FullSize}>
+                    <img src={image} alt="Full Size Profile" className="full-size-image" />
+                </div>
+                 )}
+       </div>)
+}
+
+export default ProfilePic;
